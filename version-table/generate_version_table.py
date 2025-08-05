@@ -112,6 +112,23 @@ def normalize_version_name(tag_name: str) -> str:
         return tag_name[1:]
     return tag_name
 
+def load_version_notes(notes_file: str = "version-notes.txt") -> Dict[str, str]:
+    """Load version notes from file"""
+    notes = {}
+    try:
+        with open(notes_file, 'r') as f:
+            for line in f:
+                parts = line.strip().split(maxsplit=1)
+                if len(parts) == 2:
+                    version = parts[0]
+                    note = parts[1]
+                    notes[version] = note
+    except FileNotFoundError:
+        print(f"Warning: {notes_file} not found", file=sys.stderr)
+    except Exception as e:
+        print(f"Error reading {notes_file}: {e}", file=sys.stderr)
+    return notes
+
 def generate_version_table(repo_url: str = "https://github.com/redhat-cne/cloud-event-proxy") -> str:
     """Generate markdown table with version mappings"""
 
@@ -119,6 +136,9 @@ def generate_version_table(repo_url: str = "https://github.com/redhat-cne/cloud-
     branches = get_branches(repo_url)
     releases = get_releases(repo_url)
     tags = get_tags(repo_url)
+
+    # Load version notes
+    version_notes = load_version_notes()
 
     # Create a mapping of tag names to release info
     tag_to_release = {rel['tag_name']: rel for rel in releases}
@@ -136,7 +156,7 @@ def generate_version_table(repo_url: str = "https://github.com/redhat-cne/cloud-
             'golang': golang_ver or '',
             'rest_api': rest_api_ver or '',
             'sdk_go': sdk_go_ver or '',
-            'feature': ''
+            'note': ''
         })
     processed_refs.add('main')
 
@@ -156,7 +176,7 @@ def generate_version_table(repo_url: str = "https://github.com/redhat-cne/cloud-
                 'golang': golang_ver or '',
                 'rest_api': rest_api_ver or '',
                 'sdk_go': sdk_go_ver or '',
-                'feature': ''
+                'note': version_notes.get(branch_name, '')
             })
 
         processed_refs.add(branch_name)
@@ -177,7 +197,7 @@ def generate_version_table(repo_url: str = "https://github.com/redhat-cne/cloud-
                 'golang': golang_ver or '',
                 'rest_api': rest_api_ver or '',
                 'sdk_go': sdk_go_ver or '',
-                'feature': ''
+                'note': version_notes.get(tag_name, '')
             })
 
         processed_refs.add(tag_name)
@@ -202,7 +222,7 @@ def generate_version_table(repo_url: str = "https://github.com/redhat-cne/cloud-
                 'golang': golang_ver or '',
                 'rest_api': rest_api_ver or '',
                 'sdk_go': sdk_go_ver or '',
-                'feature': ''
+                'note': version_notes.get(tag_name, '')
             })
 
         processed_refs.add(tag_name)
@@ -212,12 +232,12 @@ def generate_version_table(repo_url: str = "https://github.com/redhat-cne/cloud-
         return "No version data found."
 
     # Create table header
-    table = "| golang | cloud-event-proxy | rest-api | sdk-go  | feature      |\n"
-    table += "| ------ | ----------------- | -------- | ------- | ------------ |\n"
+    table = "| cloud-event-proxy | golang | rest-api | sdk-go  | note         |\n"
+    table += "| ----------------- | ------ | -------- | ------- | ------------ |\n"
 
     # Add rows
     for entry in version_data:
-        table += f"| {entry['golang']} | {entry['proxy_version']} | {entry['rest_api']} | {entry['sdk_go']} | {entry['feature']} |\n"
+        table += f"| {entry['proxy_version']} | {entry['golang']} | {entry['rest_api']} | {entry['sdk_go']} | {entry['note']} |\n"
 
     return table
 

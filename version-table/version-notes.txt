@@ -1,2 +1,3 @@
 release-4.18 last version to support v1 event
-release-4.19 removed v1 event and http transport
+release-4.19 removed v1 event
+release-4.20 remove http transport

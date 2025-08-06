@@ -249,7 +249,16 @@ def main():
 
     print(f"Generating version table for {repo_url}...", file=sys.stderr)
     table = generate_version_table(repo_url)
-    print(table)
+
+    # Write table to versions.md
+    output_file = "versions.md"
+    try:
+        with open(output_file, 'w') as f:
+            f.write(table)
+        print(f"Version table has been written to {output_file}", file=sys.stderr)
+    except IOError as e:
+        print(f"Error writing to {output_file}: {e}", file=sys.stderr)
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

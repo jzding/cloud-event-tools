@@ -153,12 +153,22 @@ set timefmt "%Y-%m-%d %H:%M:%S"
 set format x "%H:%M:%S"
 set grid
 
+# Dynamic Y-axis scaling
+compute_range() = system("awk -F',' 'NR>1 {print \$2*1000}' '$LOG_FILE' | sort -n | awk 'NR==1{min=\$1} END{max=\$1; print min, max}'")
+
 while (1) {
     if (system("wc -l < '$LOG_FILE'") < 2) {
         pause $INTERVAL
         continue
     }
-    plot "$LOG_FILE" using 1:(\$2*1000) with lines title "CPU (m)"
+
+    stats compute_range() nooutput
+    ymin = STATS_min - 5
+    ymax = STATS_max + 5
+
+    plot "$LOG_FILE" using 1:(\$2*1000) with lines lw 2 title "CPU (m)" axes x1y1
+    set yrange [ymin:ymax]
+
     pause $INTERVAL
 }
 EOF
@@ -173,12 +183,21 @@ set timefmt "%Y-%m-%d %H:%M:%S"
 set format x "%H:%M:%S"
 set grid
 
+compute_range() = system("awk 'NR>1 {print \$3*1000}' '$LOG_FILE' | sort -n | awk 'NR==1{min=\$1} END{max=\$1; print min, max}'")
+
 while (1) {
     if (system("wc -l < '$LOG_FILE'") < 2) {
         pause $INTERVAL
         continue
     }
-    plot "$LOG_FILE" using 1:(\$3*1000) with lines title "CPU (m)"
+
+    stats compute_range() nooutput
+    ymin = STATS_min - 5
+    ymax = STATS_max + 5
+
+    plot "$LOG_FILE" using 1:(\$3*1000) with lines lw 2 title "CPU (m)"
+    set yrange [ymin:ymax]
+
     pause $INTERVAL
 }
 EOF
@@ -355,4 +374,3 @@ echo "HTML report generated: $REPORT_FILE"
 if [[ -n "$GNUPLOT_PID" ]]; then
     kill "$GNUPLOT_PID" 2>/dev/null
 fi
-

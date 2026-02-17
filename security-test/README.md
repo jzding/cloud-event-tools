@@ -23,7 +23,7 @@ Comprehensive authentication test that validates:
 
 - ❌ **Rejection Cases** (should fail with 401 Unauthorized):
   1. No authentication (no certificate, no token)
-  2. mTLS only (valid certificate, no OAuth token)  
+  2. mTLS only (valid certificate, no OAuth token)
   3. Invalid OAuth token (valid certificate, invalid token)
 
 - ✅ **Success Case** (should succeed with 204 No Content):
@@ -102,3 +102,7 @@ When adding new security tests:
 ## Security Contact
 
 For security issues or questions about these tests, please contact the maintainers through the appropriate security channels.
+
+
+
+

@@ -2,7 +2,7 @@
 
 # Cloud Event Proxy Authentication Test Script
 # ============================================
-# 
+#
 # This script demonstrates and validates the authentication security of the cloud-event-proxy
 # server running in OpenShift linuxptp-daemon pods. It tests both success and failure cases
 # for DELETE subscription operations which require dual authentication (mTLS + OAuth).
@@ -70,7 +70,7 @@ echo "Current subscriptions count: $SUB_COUNT"
 
 if [ "$SUB_COUNT" -eq 0 ]; then
     echo "📝 No existing subscriptions found. Creating one for testing..."
-    
+
     # Create a test subscription with proper authentication
     CREATE_PAYLOAD='{"EndpointUri":"http://test-endpoint:8080/event","Resource":"/test/auth/demo"}'
     CREATE_RESULT=$(curl -s -k \
@@ -82,7 +82,7 @@ if [ "$SUB_COUNT" -eq 0 ]; then
       -X POST \
       -d "$CREATE_PAYLOAD" \
       "$BASE_URL/subscriptions")
-    
+
     if echo "$CREATE_RESULT" | grep -q "SubscriptionId"; then
         echo "✅ Test subscription created successfully"
         SUBS="$CREATE_RESULT"
@@ -110,23 +110,23 @@ test_delete() {
     local expected_result="$2"
     local curl_args="$3"
     local description="$4"
-    
+
     echo "🧪 $test_name"
     echo "Expected: $expected_result"
     echo "Description: $description"
-    
+
     # Make the request and capture both response and HTTP code
     local result
     result=$(curl -k -w "\nHTTP_CODE:%{http_code}" -X DELETE $curl_args "$BASE_URL/subscriptions/$SUB_ID" 2>/dev/null)
-    
+
     local http_code
     http_code=$(echo "$result" | grep "HTTP_CODE:" | cut -d: -f2)
-    
+
     local response_body
     response_body=$(echo "$result" | grep -v "HTTP_CODE:")
-    
+
     echo "Result: HTTP $http_code - $response_body"
-    
+
     # Check if result matches expectation
     if [ "$expected_result" = "FAIL" ] && [ "$http_code" = "401" ]; then
         echo "✅ PASS: Correctly rejected with 401 Unauthorized"
@@ -196,3 +196,7 @@ echo "   Only clients with BOTH valid Service CA certificates AND valid OAuth to
 echo "   can perform destructive operations like subscription deletion."
 echo
 echo "Test completed successfully! 🎉"
+
+
+
+

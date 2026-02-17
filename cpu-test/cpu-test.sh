@@ -130,54 +130,26 @@ echo "----------------------------------------------"
 touch "$LOG_FILE"
 
 if [[ $CSV_MODE -eq 1 ]]; then
-    echo "timestamp,cpu_cores" > "$LOG_FILE"
+    echo "timestamp,cpu_millicores" > "$LOG_FILE"
 else
-    echo "# timestamp cpu_cores" > "$LOG_FILE"
+    echo "# timestamp cpu_millicores" > "$LOG_FILE"
 fi
 
 # -------------------------------
-# Start live gnuplot chart (fixed version)
+# Start live gnuplot chart (final corrected version)
 # -------------------------------
 if [[ $LIVE_CHART -eq 1 ]]; then
     if command -v gnuplot >/dev/null 2>&1; then
+
         GNUPLOT_SCRIPT=$(mktemp)
 
         if [[ $CSV_MODE -eq 1 ]]; then
-            cat <<EOF > "$GNUPLOT_SCRIPT"
-set terminal qt font "Arial,12"
-set title "Live CPU Usage (millicores)"
-set xlabel "Time"
-set ylabel "CPU (m)"
-set xdata time
-set timefmt "%Y-%m-%d %H:%M:%S"
-set format x "%H:%M:%S"
-set grid
-
-while (1) {
-    if (system("wc -l < '$LOG_FILE'") < 2) {
-        pause $INTERVAL
-        continue
-    }
-
-    # Disable timedata mode for stats
-    set xdata
-    stats "$LOG_FILE" using 2 nooutput
-    ymin = STATS_min * 1000 - 5
-    ymax = STATS_max * 1000 + 5
-
-    # Restore timedata mode
-    set xdata time
-    set timefmt "%Y-%m-%d %H:%M:%S"
-
-    set yrange [ymin:ymax]
-
-    plot "$LOG_FILE" using 1:(\$2*1000) with lines lw 2 title "CPU (m)"
-
-    pause $INTERVAL
-}
-EOF
+            VALUE_COL=2
         else
-            cat <<EOF > "$GNUPLOT_SCRIPT"
+            VALUE_COL=3
+        fi
+
+        cat <<EOF > "$GNUPLOT_SCRIPT"
 set terminal qt font "Arial,12"
 set title "Live CPU Usage (millicores)"
 set xlabel "Time"
@@ -193,25 +165,27 @@ while (1) {
         continue
     }
 
+    # Disable timedata for stats
     set xdata
-    stats "$LOG_FILE" using 3 nooutput
-    ymin = STATS_min * 1000 - 5
-    ymax = STATS_max * 1000 + 5
+    stats "$LOG_FILE" using $VALUE_COL nooutput
+    ymin = STATS_min - 1
+    ymax = STATS_max + 1
 
+    # Restore timedata
     set xdata time
     set timefmt "%Y-%m-%d %H:%M:%S"
 
     set yrange [ymin:ymax]
 
-    plot "$LOG_FILE" using 1:(\$3*1000) with lines lw 2 title "CPU (m)"
+    plot "$LOG_FILE" using 1:(column($VALUE_COL)) with lines lw 2 title "CPU (m)"
 
     pause $INTERVAL
 }
 EOF
-        fi
 
         gnuplot -persist "$GNUPLOT_SCRIPT" &
         GNUPLOT_PID=$!
+
     else
         echo "gnuplot not found — live chart disabled."
     fi
@@ -265,9 +239,9 @@ else
     CPU_VALUES=$(awk 'NR>1 {print $3}' "$LOG_FILE")
 fi
 
-MIN=$(echo "$CPU_VALUES" | sort -n | head -1 | awk '{printf "%.3f", $1 * 1000}')
-MAX=$(echo "$CPU_VALUES" | sort -n | tail -1 | awk '{printf "%.3f", $1 * 1000}')
-AVG=$(echo "$CPU_VALUES" | awk '{sum+=$1} END {if (NR>0) printf "%.3f", (sum/NR)*1000}')
+MIN=$(echo "$CPU_VALUES" | sort -n | head -1)
+MAX=$(echo "$CPU_VALUES" | sort -n | tail -1)
+AVG=$(echo "$CPU_VALUES" | awk '{sum+=$1} END {if (NR>0) printf "%.3f", (sum/NR)}')
 
 echo "-----------------------------------------------------------"
 echo "CPU Usage Summary for pod: $POD"
@@ -278,7 +252,7 @@ echo "Average CPU: ${AVG}m"
 echo "-----------------------------------------------------------"
 
 # -------------------------------
-# Export final chart to PNG
+# Export final chart to PNG (corrected)
 # -------------------------------
 PNG_FILE="${LOG_FILE%.log}.png"
 PNG_FILE="${PNG_FILE%.csv}.png"
@@ -287,20 +261,12 @@ if command -v gnuplot >/dev/null 2>&1; then
     GNUPLOT_PNG_SCRIPT=$(mktemp)
 
     if [[ $CSV_MODE -eq 1 ]]; then
-        cat <<EOF > "$GNUPLOT_PNG_SCRIPT"
-set terminal pngcairo size 1280,720 enhanced font 'Arial,12'
-set output "$PNG_FILE"
-set title "CPU Usage (millicores)"
-set xlabel "Time"
-set ylabel "CPU (m)"
-set xdata time
-set timefmt "%Y-%m-%d %H:%M:%S"
-set format x "%H:%M:%S"
-set grid
-plot "$LOG_FILE" using 1:(\$2*1000) with lines lw 2 title "CPU (m)"
-EOF
+        VALUE_COL=2
     else
-        cat <<EOF > "$GNUPLOT_PNG_SCRIPT"
+        VALUE_COL=3
+    fi
+
+    cat <<EOF > "$GNUPLOT_PNG_SCRIPT"
 set terminal pngcairo size 1280,720 enhanced font 'Arial,12'
 set output "$PNG_FILE"
 set title "CPU Usage (millicores)"
@@ -310,9 +276,14 @@ set xdata time
 set timefmt "%Y-%m-%d %H:%M:%S"
 set format x "%H:%M:%S"
 set grid
-plot "$LOG_FILE" using 1:(\$3*1000) with lines lw 2 title "CPU (m)"
+
+stats "$LOG_FILE" using $VALUE_COL nooutput
+ymin = STATS_min - 1
+ymax = STATS_max + 1
+set yrange [ymin:ymax]
+
+plot "$LOG_FILE" using 1:(column($VALUE_COL)) with lines lw 2 title "CPU (m)"
 EOF
-    fi
 
     gnuplot "$GNUPLOT_PNG_SCRIPT"
     echo "Chart exported to: $PNG_FILE"

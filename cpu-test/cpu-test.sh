@@ -10,6 +10,11 @@ CSV_MODE=0
 LIVE_CHART=0
 
 # -------------------------------
+# Capture full command
+# -------------------------------
+FULL_COMMAND="$0 $*"
+
+# -------------------------------
 # Parse parameters
 # -------------------------------
 while [[ $# -gt 0 ]]; do
@@ -54,6 +59,11 @@ if [[ -z "$POD" ]]; then
 fi
 
 # -------------------------------
+# Retrieve node where pod is running
+# -------------------------------
+NODE_NAME=$(oc get pod "$POD" -n openshift-ptp -o jsonpath='{.spec.nodeName}')
+
+# -------------------------------
 # Retrieve cluster name
 # -------------------------------
 CLUSTER_NAME=$(oc get infrastructure cluster -o jsonpath='{.status.infrastructureName}' 2>/dev/null)
@@ -88,15 +98,23 @@ PROM_URL="http://localhost:9090"
 QUERY='pod:container_cpu_usage:sum{namespace="openshift-ptp"}'
 
 # -------------------------------
+# Start timestamp
+# -------------------------------
+START_TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S")
+
+# -------------------------------
 # Print test configuration
 # -------------------------------
 echo "----------------------------------------------"
 echo "CPU Usage Test Configuration"
 echo "----------------------------------------------"
+echo "Command Used:        $FULL_COMMAND"
+echo "Start Timestamp:     $START_TIMESTAMP"
 echo "Cluster Name:        $CLUSTER_NAME"
 echo "Cluster Version:     $CLUSTER_VERSION"
 echo "PTP Operator Version: $PTP_OPERATOR_VERSION"
 echo "Target Pod:          $POD"
+echo "Node Running Pod:    $NODE_NAME"
 echo "Duration (seconds):  $DURATION"
 echo "Interval (seconds):  $INTERVAL"
 echo "Output Log File:     $LOG_FILE"
@@ -291,10 +309,13 @@ REPORT_FILE="${LOG_FILE%.*}.html"
     echo "<li><b>Cluster Name:</b> $CLUSTER_NAME</li>"
     echo "<li><b>Cluster Version:</b> $CLUSTER_VERSION</li>"
     echo "<li><b>PTP Operator Version:</b> $PTP_OPERATOR_VERSION</li>"
+    echo "<li><b>Node Running Pod:</b> $NODE_NAME</li>"
+    echo "<li><b>Start Timestamp:</b> $START_TIMESTAMP</li>"
     echo "</ul>"
 
     echo "<h2>Test Configuration</h2>"
     echo "<ul>"
+    echo "<li><b>Command Used:</b> $FULL_COMMAND</li>"
     echo "<li><b>Pod:</b> $POD</li>"
     echo "<li><b>Duration (seconds):</b> $DURATION</li>"
     echo "<li><b>Interval (seconds):</b> $INTERVAL</li>"

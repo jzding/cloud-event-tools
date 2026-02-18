@@ -61,7 +61,7 @@ Automatically retrieves:
 ## 🚀 Usage
 
 ```sh
-./cpu-test.sh [options]
+./ptp-cpu-test.sh [options]
 ```
 
 ### Options
@@ -82,37 +82,37 @@ Automatically retrieves:
 ### 1. Run a 10‑minute test with default interval
 
 ```sh
-./cpu-test.sh -d 10
+./ptp-cpu-test.sh -d 10
 ```
 
 ### 2. Run a 5‑minute test with 2‑second sampling
 
 ```sh
-./cpu-test.sh -d 5 -i 2
+./ptp-cpu-test.sh -d 5 -i 2
 ```
 
 ### 3. Output to a custom log file
 
 ```sh
-./cpu-test.sh -o ptp-cpu.log
+./ptp-cpu-test.sh -o ptp-cpu.log
 ```
 
 ### 4. Generate CSV output
 
 ```sh
-./cpu-test.sh -c
+./ptp-cpu-test.sh -c
 ```
 
 ### 5. Enable live chart (requires gnuplot)
 
 ```sh
-./cpu-test.sh --live
+./ptp-cpu-test.sh --live
 ```
 
 ### 6. Combine options
 
 ```sh
-./cpu-test.sh -d 3 -i 1 -c -o results.csv --live
+./ptp-cpu-test.sh -d 3 -i 1 -c -o results.csv --live
 ```
 
 ---

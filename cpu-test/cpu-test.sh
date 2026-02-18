@@ -136,7 +136,7 @@ else
 fi
 
 # -------------------------------
-# Start live gnuplot chart (final corrected version)
+# Start live gnuplot chart (timecolumn + strcol)
 # -------------------------------
 if [[ $LIVE_CHART -eq 1 ]]; then
     if command -v gnuplot >/dev/null 2>&1; then
@@ -144,9 +144,13 @@ if [[ $LIVE_CHART -eq 1 ]]; then
         GNUPLOT_SCRIPT=$(mktemp)
 
         if [[ $CSV_MODE -eq 1 ]]; then
-            VALUE_COL=2
+            VALUE_COL="(strcol(2)+0)"
+            SEPARATOR_LINE='set datafile separator ","'
+            SKIP_HEADER="every ::1"
         else
-            VALUE_COL=3
+            VALUE_COL="(strcol(3)+0)"
+            SEPARATOR_LINE=""
+            SKIP_HEADER=""
         fi
 
         cat <<EOF > "$GNUPLOT_SCRIPT"
@@ -154,10 +158,12 @@ set terminal qt font "Arial,12"
 set title "Live CPU Usage (millicores)"
 set xlabel "Time"
 set ylabel "CPU (m)"
+$SEPARATOR_LINE
 set xdata time
 set timefmt "%Y-%m-%d %H:%M:%S"
 set format x "%H:%M:%S"
 set grid
+set autoscale y
 
 while (1) {
     if (system("wc -l < '$LOG_FILE'") < 2) {
@@ -165,19 +171,7 @@ while (1) {
         continue
     }
 
-    # Disable timedata for stats
-    set xdata
-    stats "$LOG_FILE" using $VALUE_COL nooutput
-    ymin = STATS_min - 1
-    ymax = STATS_max + 1
-
-    # Restore timedata
-    set xdata time
-    set timefmt "%Y-%m-%d %H:%M:%S"
-
-    set yrange [ymin:ymax]
-
-    plot "$LOG_FILE" using 1:(column($VALUE_COL)) with lines lw 2 title "CPU (m)"
+    plot "$LOG_FILE" $SKIP_HEADER using (timecolumn(1, "%Y-%m-%d %H:%M:%S")):$VALUE_COL with lines lw 2 title "CPU (m)"
 
     pause $INTERVAL
 }
@@ -210,18 +204,21 @@ while true; do
     RESULT=$(oc exec "$PROM_POD" -n "$PROM_NS" -- \
         promtool query instant "$PROM_URL" "$QUERY" 2>/dev/null)
 
-    CPU=$(echo "$RESULT" | \
+    CPU_CORES=$(echo "$RESULT" | \
         grep "pod=\"$POD\"" | \
         awk -F '=>' '{print $2}' | \
         awk '{print $1}')
 
+    # Convert cores -> millicores, 3 decimal places
+    CPU_MILLI=$(awk -v c="$CPU_CORES" 'BEGIN {printf "%.3f", c * 1000}')
+
     TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S")
 
-    if [[ -n "$CPU" ]]; then
+    if [[ -n "$CPU_MILLI" ]]; then
         if [[ $CSV_MODE -eq 1 ]]; then
-            echo "$TIMESTAMP,$CPU" >> "$LOG_FILE"
+            echo "$TIMESTAMP,$CPU_MILLI" >> "$LOG_FILE"
         else
-            echo "$TIMESTAMP $CPU" >> "$LOG_FILE"
+            echo "$TIMESTAMP $CPU_MILLI" >> "$LOG_FILE"
         fi
     fi
 
@@ -231,7 +228,7 @@ done
 echo -e "\nData collection complete. Summarizing..."
 
 # -------------------------------
-# Summary
+# Summary (in millicores)
 # -------------------------------
 if [[ $CSV_MODE -eq 1 ]]; then
     CPU_VALUES=$(awk -F',' 'NR>1 {print $2}' "$LOG_FILE")
@@ -243,6 +240,10 @@ MIN=$(echo "$CPU_VALUES" | sort -n | head -1)
 MAX=$(echo "$CPU_VALUES" | sort -n | tail -1)
 AVG=$(echo "$CPU_VALUES" | awk '{sum+=$1} END {if (NR>0) printf "%.3f", (sum/NR)}')
 
+# Precompute Y range for PNG
+YMIN=$(awk -v m="$MIN" 'BEGIN {printf "%.3f", m - 1}')
+YMAX=$(awk -v m="$MAX" 'BEGIN {printf "%.3f", m + 1}')
+
 echo "-----------------------------------------------------------"
 echo "CPU Usage Summary for pod: $POD"
 echo "-----------------------------------------------------------"
@@ -252,18 +253,21 @@ echo "Average CPU: ${AVG}m"
 echo "-----------------------------------------------------------"
 
 # -------------------------------
-# Export final chart to PNG (corrected)
+# Export final chart to PNG (timecolumn + strcol)
 # -------------------------------
-PNG_FILE="${LOG_FILE%.log}.png"
-PNG_FILE="${PNG_FILE%.csv}.png"
+PNG_FILE="${LOG_FILE%.*}.png"
 
 if command -v gnuplot >/dev/null 2>&1; then
     GNUPLOT_PNG_SCRIPT=$(mktemp)
 
     if [[ $CSV_MODE -eq 1 ]]; then
-        VALUE_COL=2
+        VALUE_COL="(strcol(2)+0)"
+        SEPARATOR_LINE='set datafile separator ","'
+        SKIP_HEADER="every ::1"
     else
-        VALUE_COL=3
+        VALUE_COL="(strcol(3)+0)"
+        SEPARATOR_LINE=""
+        SKIP_HEADER=""
     fi
 
     cat <<EOF > "$GNUPLOT_PNG_SCRIPT"
@@ -272,17 +276,14 @@ set output "$PNG_FILE"
 set title "CPU Usage (millicores)"
 set xlabel "Time"
 set ylabel "CPU (m)"
+$SEPARATOR_LINE
 set xdata time
 set timefmt "%Y-%m-%d %H:%M:%S"
 set format x "%H:%M:%S"
 set grid
+set yrange [$YMIN:$YMAX]
 
-stats "$LOG_FILE" using $VALUE_COL nooutput
-ymin = STATS_min - 1
-ymax = STATS_max + 1
-set yrange [ymin:ymax]
-
-plot "$LOG_FILE" using 1:(column($VALUE_COL)) with lines lw 2 title "CPU (m)"
+plot "$LOG_FILE" $SKIP_HEADER using (timecolumn(1, "%Y-%m-%d %H:%M:%S")):$VALUE_COL with lines lw 2 title "CPU (m)"
 EOF
 
     gnuplot "$GNUPLOT_PNG_SCRIPT"

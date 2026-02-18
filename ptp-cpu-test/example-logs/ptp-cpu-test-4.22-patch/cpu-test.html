@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>CPU Usage Report - linuxptp-daemon-mfzqn</title></head><body>
+<h1>CPU Usage Report</h1>
+<h2>System Info</h2>
+<ul>
+<li><b>Cluster Name:</b> cnfdg13-qtqnj</li>
+<li><b>Cluster Version:</b> 4.20.0</li>
+<li><b>PTP Operator Version:</b> 4.22</li>
+<li><b>Node Running Pod:</b> cnfdg13.ptp.eng.rdu2.dc.redhat.com</li>
+<li><b>Start Timestamp:</b> 2026-02-17 21:01:07</li>
+</ul>
+<h2>Test Configuration</h2>
+<ul>
+<li><b>Command Used:</b> /Users/jacding/workspace/jzding/cloud-event-tools/ptp-cpu-test/ptp-cpu-test.sh -d 30 -i 5 -o /Users/jacding/logs/cpu-test.log -c --live</li>
+<li><b>Pod:</b> linuxptp-daemon-mfzqn</li>
+<li><b>Duration (seconds):</b> 1800</li>
+<li><b>Interval (seconds):</b> 5</li>
+<li><b>Log file:</b> /Users/jacding/logs/cpu-test.log</li>
+<li><b>CPU unit:</b> millicores (m)</li>
+</ul>
+<h2>CPU Summary</h2>
+<ul>
+<li><b>Minimum CPU:</b> 11.301m</li>
+<li><b>Maximum CPU:</b> 21.996m</li>
+<li><b>Average CPU:</b> 19.702m</li>
+</ul>
+<h2>Container Images (linuxptp-daemon pod)</h2>
+<table border="1" cellspacing="0" cellpadding="4">
+<tr><th>Container</th><th>Image</th></tr>
+<tr><td>cloud-event-proxy</td><td>quay.io/openshift/origin-cloud-event-proxy:4.22</td></tr>
+<tr><td>kube-rbac-proxy</td><td>quay.io/openshift/origin-kube-rbac-proxy:4.22</td></tr>
+<tr><td>linuxptp-daemon-container</td><td>quay.io/jacding/linuxptp-daemon:4.22</td></tr>
+</table>
+<h2>CPU Usage Chart</h2>
+<img src="cpu-test.png" alt="CPU Usage Chart" style="max-width:100%;height:auto;"/>
+</body></html>
